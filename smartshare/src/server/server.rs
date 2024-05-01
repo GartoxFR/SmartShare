@@ -1,7 +1,7 @@
+use operational_transform::OperationSeq;
 use smartshare::protocol::msg::{MessageServer, ModifRequest};
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
-use operational_transform::{Operation, OperationSeq};
 
 use crate::client::Client;
 
@@ -47,19 +47,6 @@ impl Server {
     }
 
     async fn on_message(&mut self, source_id: usize, message: MessageServer) {
-        /*for client in self
-            .clients
-            .iter()
-            .filter(|client| client.id() != source_id)
-        {
-            if client.send(message.clone()).await.is_err() {
-                warn!(
-                    "Could not send message to client {}. Maybe it is disconnected ?",
-                    client.id()
-                );
-            }
-        }*/
-
         match message {
             MessageServer::ServerUpdate(req) => {
                 if req.rev_num >= self.deltas.len() {
@@ -70,13 +57,10 @@ impl Server {
                         (_, delta_p) = self.deltas[i].transform(&delta_p).unwrap();
                     }
                     self.deltas.push(delta_p.clone());
-                    for client in self
-                        .clients
-                        .iter()
-                        //.filter(|client| client.id() != source_id)
+                    for client in self.clients.iter()
+                    //.filter(|client| client.id() != source_id)
                     {
-                        let notif = 
-                        if client.id() == source_id {
+                        let notif = if client.id() == source_id {
                             MessageServer::Ack
                         } else {
                             MessageServer::ServerUpdate(ModifRequest {

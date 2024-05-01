@@ -10,7 +10,6 @@ use tracing::info;
 use crate::client::Client;
 use crate::server::Server;
 
-
 pub mod client;
 pub mod server;
 
