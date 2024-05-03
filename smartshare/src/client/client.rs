@@ -215,35 +215,31 @@ impl Client {
                 return;
             }
         };
-            let (updated_ide_change, new_ide_sent_delta) =
-                ide_seq.transform(&self.ide_sent_delta).unwrap();
-            let (server_delta, new_ide_unsent_delta) = updated_ide_change
-                .transform(&self.ide_unsent_delta)
-                .unwrap();
+        let (updated_ide_change, new_ide_sent_delta) =
+            ide_seq.transform(&self.ide_sent_delta).unwrap();
+        let (server_delta, new_ide_unsent_delta) = updated_ide_change
+            .transform(&self.ide_unsent_delta)
+            .unwrap();
 
-            let new_server_unsent_delta = self
-                .server_unsent_delta
-                .compose(&server_delta)
-                .expect("modifs_to_operation_seq result should be length compatible with op_seq");
+        let new_server_unsent_delta = self
+            .server_unsent_delta
+            .compose(&server_delta)
+            .expect("modifs_to_operation_seq result should be length compatible with op_seq");
 
-            
-            self.ide_sent_delta = new_ide_sent_delta;
-            self.ide_unsent_delta = new_ide_unsent_delta;
-            self.server_unsent_delta= new_server_unsent_delta;
+        self.ide_sent_delta = new_ide_sent_delta;
+        self.ide_unsent_delta = new_ide_unsent_delta;
+        self.server_unsent_delta = new_server_unsent_delta;
 
-            self.ide.send(MessageIde::Ack).await;
-            if(!self.ide_sent_delta.is_noop()){
+        self.ide.send(MessageIde::Ack).await;
+        if !self.ide_sent_delta.is_noop() {
             self.ide
                 .send(MessageIde::Update {
                     changes: to_ide_changes(&self.ide_sent_delta),
                 })
                 .await;
-            }
-            if(self.server_sent_delta.is_noop() && !self.server_unsent_delta.is_noop())
-            {
-                self.submit_server_change();
-            }
-        
+        }
+        if self.server_sent_delta.is_noop() && !self.server_unsent_delta.is_noop() {
+            self.submit_server_change().await;
         }
     }
 
