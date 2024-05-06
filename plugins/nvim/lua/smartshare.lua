@@ -193,7 +193,7 @@ end, {})
 
 function set_cursor(id, offset, anchor)
     local start_row, start_col = M.get_line_column_from_byte_offset(offset)
-    local end_row, end_col = M.get_line_column_from_byte_offset(offset + anchor)
+    local end_row, end_col = M.get_line_column_from_byte_offset(anchor)
     local hl = vim.api.nvim_get_hl(0, { name = "SmartShareCursor" .. id })
     if next(hl) == nil then
         local rgb = string.format("#%02X%02X%02X", math.random(0, 255), math.random(0, 255), math.random(0, 255))
@@ -207,6 +207,7 @@ function set_cursor(id, offset, anchor)
         end_col = end_col,
         hl_group = "SmartShareCursor" ..
             id,
+        strict = false
     }
     vim.api.nvim_buf_set_extmark(buf, ns, start_row, start_col, extmark_opts)
 end
@@ -235,7 +236,7 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
                     {
                         cursor = offset,
                         -- anchor = get_selection_offset() - offset,
-                        anchor = 1,
+                        anchor = offset + 1,
                     }
                 }
             }
