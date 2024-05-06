@@ -192,10 +192,11 @@ function set_cursor(id, offset, anchor)
         id = id + 1,
         priority = 10,
         end_row = end_row,
-        end_col = end_col,
+        end_col = end_col + 1,
         hl_eol = true,
         hl_group = "SmartShareCursor" ..
             id,
+        strict = false
     }
     vim.api.nvim_buf_set_extmark(buf, ns, start_row, start_col, extmark_opts)
 end
@@ -216,6 +217,9 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
                 local cursor = vim.api.nvim_win_get_cursor(0)
                 local anchor_offset = get_selection_start()
                 local cursor_offset = math.max(0, line_col_to_byte_offset(cursor[1] - 1, cursor[2]))
+                if anchor_offset < 0 then
+                    anchor_offset = cursor_offset
+                end
 
                 if cursor_offset < anchor_offset then
                     local temp = cursor_offset
@@ -228,7 +232,7 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
                     cursors = {
                         {
                             anchor = anchor_offset,
-                            cursor = cursor_offset + 1,
+                            cursor = cursor_offset,
                         }
                     }
                 }
