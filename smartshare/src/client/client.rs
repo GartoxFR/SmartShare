@@ -236,18 +236,21 @@ impl Client {
     }
 
     async fn on_ide_cursor_move(&mut self, offset: u64, range: u64) -> Result<()> {
-        self.server
+        let _ = self
+            .server
             .send(MessageServer::Cursor {
                 id: self.client_id,
                 offset,
                 range,
             })
-            .await?;
+            .await;
         Ok(())
     }
 
     async fn on_server_cursor_move(&mut self, id: usize, offset: u64, range: u64) -> Result<()> {
-        self.ide.send(MessageIde::Cursor { id, offset ,range}).await;
+        self.ide
+            .send(MessageIde::Cursor { id, offset, range })
+            .await;
         Ok(())
     }
 
@@ -258,7 +261,9 @@ impl Client {
             MessageServer::Error { error: err } => Err(anyhow!(err)),
             MessageServer::RequestFile => self.on_request_file().await,
             MessageServer::File { file, version } => self.on_receive_file(file, version).await,
-            MessageServer::Cursor { id, offset,range } => self.on_server_cursor_move(id, offset, range).await,
+            MessageServer::Cursor { id, offset, range } => {
+                self.on_server_cursor_move(id, offset, range).await
+            }
         };
 
         if let Err(err) = res {
@@ -275,7 +280,9 @@ impl Client {
             MessageIde::Update { changes } => self.on_ide_change(changes).await,
             MessageIde::File { file } => self.on_ide_file(file).await,
             MessageIde::Ack => self.on_ide_ack().await,
-            MessageIde::Cursor { offset, range, .. } => self.on_ide_cursor_move(offset, range).await,
+            MessageIde::Cursor { offset, range, .. } => {
+                self.on_ide_cursor_move(offset, range).await
+            }
             _ => {
                 warn!("IDE sent bad unexpected message: {:?}", message_ide);
                 Err(anyhow!("Unexpected message type: {:?}", message_ide))
