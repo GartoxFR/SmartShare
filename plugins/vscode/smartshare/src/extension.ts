@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { logClient, logServer, offsetToRange } from './utils';
 import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
-import { Ack, Cursor, File, Message, RequestFile, TextModification, Update, isMessage, matchMessage } from './message';
+import { Ack, Cursors, Cursor, File, Message, RequestFile, TextModification, Update, isMessage, matchMessage } from './message';
 
 let waitingAcks = 0;
 let toIgnore: string[] = [];
@@ -25,11 +25,12 @@ function procWrite(proc: ChildProcessWithoutNullStreams, message: Message): void
     proc.stdin.write(JSON.stringify(message) + '\n');
 }
 
-function setCursor(clientId: number, range: vscode.Range) {
+function setCursor(clientId: number, cursor: Cursor) {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
         return;
     }
+    const range = new vscode.Range(editor.document.positionAt(cursor.cursor), editor.document.positionAt(cursor.anchor));
     const prevDecoration = cursorsDecorations.get(clientId);
     decoration = vscode.window.createTextEditorDecorationType({
         borderWidth: "0 2px 0 0",
@@ -127,11 +128,13 @@ function handleMessage(data: Message) {
                 waitingAcks--;
             }
         },
-        (cursor: Cursor) => {
+        (cursor: Cursors) => {
             if (!editor) {
                 return;
             }
-            setCursor(cursor.id, offsetToRange(editor, cursor.offset, cursor.range));
+            for (let cursorChange of cursor.cursors) {
+                setCursor(cursor.id, cursorChange);
+            }
         }
     );
 }
@@ -189,14 +192,17 @@ function changeSelectionsHandler(event: vscode.TextEditorSelectionChangeEvent): 
     if (!editor || !clientProc) {
         return;
     }
-    const selection = event.selections[0];
-    const offset = event.textEditor.document.offsetAt(selection.active);
-    const range = event.textEditor.document.offsetAt(selection.anchor) - offset;
-    const message: Cursor = {
-        id: 0,
+    let cursors: Cursor[] = [];
+    for (let selection of event.selections) {
+        cursors.push({
+            cursor: editor.document.offsetAt(selection.active),
+            anchor: editor.document.offsetAt(selection.anchor)
+        });
+    }
+    const message: Cursors = {
         action: "cursor",
-        offset: offset,
-        range: range,
+        id: 0,
+        cursors: cursors
     }
     procWrite(clientProc, message);
 }
