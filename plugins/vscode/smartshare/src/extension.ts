@@ -12,7 +12,6 @@ let changeDocumentDisposable: vscode.Disposable;
 let changeSelectionsDisposable: vscode.Disposable;
 let statusBarItem: vscode.StatusBarItem;
 let init = true;
-let ignoreNextEvent = false;
 let cursorsDecorations: Map<number, vscode.Disposable[]> = new Map();
 
 const EXE_PATH = __dirname + '/../../../../smartshare/target/debug/';
@@ -117,7 +116,6 @@ function handleMessage(data: Message) {
         (file: File) => {
             vscode.window.showInformationMessage("Connected to the SmartShare session");
             statusBarItem.text = "Connected";
-            ignoreNextEvent = false;
             let change = new TextModification(0, editor.document.getText().length || 0, file.file);
             change.write(editor).then(() => { init = false });
         },
@@ -136,7 +134,7 @@ function handleMessage(data: Message) {
 
 function changeDocumentHandler(event: vscode.TextDocumentChangeEvent): void {
 
-    if (event.document.uri.path.startsWith("extension-output")) {
+    if (event.document.uri != editor.document.uri) {
         return;
     }
 
@@ -176,7 +174,7 @@ function changeDocumentHandler(event: vscode.TextDocumentChangeEvent): void {
 }
 
 function changeSelectionsHandler(event: vscode.TextEditorSelectionChangeEvent): void {
-    if (!clientProc || event.textEditor.document.uri.path.startsWith("extension-output")) {
+    if (!clientProc || event.textEditor.document.uri != editor.document.uri) {
         return;
     }
     let cursors: Cursor[] = [];
@@ -195,12 +193,19 @@ function changeSelectionsHandler(event: vscode.TextEditorSelectionChangeEvent): 
 }
 
 
-function startClient(addr: string) {
+async function startClient(addr: string) {
 
     if (clientProc) {
         vscode.window.showInformationMessage("Already connected to a SmartShare session")
         return;
     }
+
+    await vscode.commands.executeCommand('workbench.action.files.newUntitledFile');
+    if (!vscode.window.activeTextEditor) {
+        vscode.window.showErrorMessage("Failed to create a new file")
+        return;
+    }
+    editor = vscode.window.activeTextEditor;
 
     let client = spawn(
         EXE_PATH + "client",
@@ -291,8 +296,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(vscode.commands.registerCommand('smartshare.createSession', () => {
         startServer(() => {
-            setTimeout(() => {
-                startClient(DEFAULT_ADDR)
+            setTimeout(async () => {
+                await startClient(DEFAULT_ADDR);
             }, 100);
         });
     }));
@@ -308,13 +313,7 @@ export async function activate(context: vscode.ExtensionContext) {
         if (!addr) {
             return;
         }
-        await vscode.commands.executeCommand('workbench.action.files.newUntitledFile');
-        if (!vscode.window.activeTextEditor) {
-            vscode.window.showErrorMessage("Failed to create a new file")
-            return;
-        }
-        editor = vscode.window.activeTextEditor;
-        startClient(addr);
+        await startClient(addr);
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('smartshare.disconnect', async () => {
