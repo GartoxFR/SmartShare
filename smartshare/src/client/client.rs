@@ -236,17 +236,22 @@ impl Client {
     }
 
     async fn on_ide_cursor_move(&mut self, mut cursor_info: CursorsInfo) -> Result<()> {
+        let file = self.file.as_mut().ok_or_else(|| anyhow!("File not set"))?;
         if matches!(self.format, Format::Bytes) {
-            let file = self.file.as_mut().ok_or_else(|| anyhow!("File not set"))?;
             file.byte_to_char_cursor(&mut cursor_info);
+        }
+        for cursor in cursor_info.cursors.iter() {
+            if cursor.cursor > file.len_chars() as u64 || cursor.anchor > file.len_chars() as u64 {
+                return Err(anyhow!("invalid cursor"));
+            }
         }
         let _ = self.server.send(MessageServer::Cursor(cursor_info)).await;
         Ok(())
     }
 
     async fn on_server_cursor_move(&mut self, mut cursor_info: CursorsInfo) -> Result<()> {
+        let file = self.file.as_mut().ok_or_else(|| anyhow!("File not set"))?;
         if matches!(self.format, Format::Bytes) {
-            let file = self.file.as_mut().ok_or_else(|| anyhow!("File not set"))?;
             file.char_to_byte_cursor(&mut cursor_info);
         }
         self.ide.send(MessageIde::Cursor(cursor_info)).await;
