@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import { logClient, logServer } from './utils';
 import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import { Ack, Cursors, Cursor, File, Message, RequestFile, TextModification, Update, isMessage, matchMessage } from './message';
-import path from 'path';
 
 let waitingAcks = 0;
 let toIgnore: string[] = [];
@@ -146,11 +145,6 @@ function changeDocumentHandler(event: vscode.TextDocumentChangeEvent): void {
     if (init || !clientProc) {
         return;
     }
-    // if (ignoreNextEvent) {
-    //     logClient.debug("ignored changes: " + JSON.stringify(event.contentChanges))
-    //     ignoreNextEvent = false
-    //     return;
-    // }
 
     let changes = event.contentChanges.map(change => {
         return new TextModification(
@@ -161,8 +155,6 @@ function changeDocumentHandler(event: vscode.TextDocumentChangeEvent): void {
     });
 
     let newChanges = [];
-    //logClient.debug(toIgnore);
-    //logClient.debug(JSON.stringify(changes));
     for(const change of changes) {
         let index = toIgnore.indexOf(JSON.stringify(change));
         if(index != -1) {
@@ -184,7 +176,7 @@ function changeDocumentHandler(event: vscode.TextDocumentChangeEvent): void {
 }
 
 function changeSelectionsHandler(event: vscode.TextEditorSelectionChangeEvent): void {
-    if (!clientProc) {
+    if (!clientProc || event.textEditor.document.uri.path.startsWith("extension-output")) {
         return;
     }
     let cursors: Cursor[] = [];
