@@ -284,6 +284,20 @@ impl Client {
         }
     }
 
+    async fn on_ide_cursor_move(&mut self, offset: u64) {
+        let _ = self
+            .server
+            .send(MessageServer::Cursor {
+                id: self.client_id,
+                offset,
+            })
+            .await;
+    }
+
+    async fn on_server_cursor_move(&mut self, id: usize, offset: u64) {
+        self.ide.send(MessageIde::Cursor { id, offset }).await;
+    }
+
     pub async fn on_message_server(&mut self, message: MessageServer) {
         match message {
             MessageServer::ServerUpdate(modif) => self.on_server_change(&modif).await,
@@ -291,6 +305,7 @@ impl Client {
             MessageServer::Error { error: err } => self.on_server_error(err).await,
             MessageServer::RequestFile => self.on_request_file().await,
             MessageServer::File { file, version } => self.on_receive_file(file, version).await,
+            MessageServer::Cursor { id, offset } => self.on_server_cursor_move(id, offset).await,
         }
     }
 
@@ -302,6 +317,7 @@ impl Client {
             MessageIde::RequestFile => warn!("IDE sent RequestFile"),
             MessageIde::Error { .. } => warn!("IDE sent error"),
             MessageIde::Ack => self.on_ide_ack().await,
+            MessageIde::Cursor { offset, .. } => self.on_ide_cursor_move(offset).await,
         }
     }
 }
