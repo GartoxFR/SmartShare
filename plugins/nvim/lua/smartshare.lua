@@ -196,10 +196,8 @@ function set_cursor(id, offset, anchor)
     local end_row, end_col = M.get_line_column_from_byte_offset(offset + anchor)
     local hl = vim.api.nvim_get_hl(0, { name = "SmartShareCursor" .. id })
     if next(hl) == nil then
-        local r = string.format("%x", math.random(0, 255))
-        local g = string.format("%x", math.random(0, 255))
-        local b = string.format("%x", math.random(0, 255))
-        hl = vim.api.nvim_set_hl(0, "SmartShareCursor" .. id, { bg = "#" .. r .. g .. b })
+        local rgb = string.format("#%02X%02X%02X", math.random(0, 255), math.random(0, 255), math.random(0, 255))
+        hl = vim.api.nvim_set_hl(0, "SmartShareCursor" .. id, { bg = rgb })
     end
 
     local extmark_opts = {
@@ -208,7 +206,7 @@ function set_cursor(id, offset, anchor)
         end_row = end_row,
         end_col = end_col,
         hl_group = "SmartShareCursor" ..
-            id
+            id,
     }
     vim.api.nvim_buf_set_extmark(buf, ns, start_row, start_col, extmark_opts)
 end
