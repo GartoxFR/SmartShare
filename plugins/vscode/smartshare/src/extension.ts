@@ -27,6 +27,11 @@ async function applyChange(change: TextModification): Promise<boolean> {
     if(!res) {
         const index = toIgnore.indexOf(JSON.stringify(toIgnore));
         toIgnore.splice(index, 1);
+    } else {
+        setTimeout(() => {
+            const index = toIgnore.indexOf(JSON.stringify(toIgnore));
+            toIgnore.splice(index, 1);
+        }, 10);
     }
     return res;
 }
@@ -145,7 +150,7 @@ function changeDocumentHandler(event: vscode.TextDocumentChangeEvent): any {
             newChanges.push(change);
         }
     }
-    toIgnore = [];
+    //toIgnore = [];
     if(newChanges.length == 0) {
         return;
     }
