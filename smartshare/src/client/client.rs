@@ -92,7 +92,7 @@ impl Client {
         self.server_unsent_delta = new_server_unsent_delta;
 
         self.ide_unsent_delta = self.ide_unsent_delta.compose(&ide_delta).unwrap();
-        if self.ide_sent_delta.is_noop() {
+        if self.ide_sent_delta.is_noop() && !self.ide_unsent_delta.is_noop() {
             self.submit_ide_change().await?;
         }
 
@@ -203,7 +203,9 @@ impl Client {
 
         if !self.ide_sent_delta.is_noop() {
             self.ide_unsent_delta = self.ide_sent_delta.compose(&self.ide_unsent_delta).unwrap();
-            self.submit_ide_change().await?;
+            if !self.ide_unsent_delta.is_noop() {
+                self.submit_ide_change().await?;
+            }
         }
 
         if self.server_sent_delta.is_noop() && !self.server_unsent_delta.is_noop() {
